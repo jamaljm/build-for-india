@@ -1,12 +1,19 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TranscriptProvider } from "@/app/contexts/TranscriptContext";
 import { EventProvider } from "@/app/contexts/EventContext";
 
 export const metadata: Metadata = {
-  title: "Kerala Government Certificate Helper",
+  title: "Build for India - Multi-Agent AI System",
   description:
-    "A tool to help you apply for certificates from the Kerala government.",
+    "Intelligent multi-agent system for autonomous decision-making and collaboration",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
 };
 
 export default function RootLayout({
