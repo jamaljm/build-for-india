@@ -67,7 +67,7 @@ function App() {
     handleServerEventRef.current(eventData);
   };
 
-  // Handle button clicks - just trigger conversation
+  // Handle button clicks - conversation or navigation
   const handleStartConversation = (topic?: string) => {
     if (sessionStatus !== "CONNECTED") {
       console.log("Not connected - connecting first");
@@ -86,6 +86,11 @@ function App() {
     } catch (error) {
       console.error("Error sending message:", error);
     }
+  };
+
+  // Handle Apply form navigation
+  const handleGoToApply = () => {
+    window.location.href = "/apply";
   };
 
   useEffect(() => {
@@ -339,6 +344,13 @@ function App() {
               {sessionStatus === "CONNECTED"
                 ? "🔌 Disconnect Assistant"
                 : "🎤 Connect & Start Speaking"}
+            </button>
+            
+            <button
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-lg bg-blue-600 hover:bg-blue-700"
+              onClick={handleGoToApply}
+            >
+              📝 Apply for Certificate
             </button>
           </div>
 
