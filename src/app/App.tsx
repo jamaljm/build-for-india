@@ -61,10 +61,54 @@ function App() {
     setSelectedAgentName,
   });
 
-  // Enhanced server event handler
+  // Enhanced server event handler with navigation detection
   const handleServerEvent = (eventData: any) => {
     // Call the original handler
     handleServerEventRef.current(eventData);
+
+    // Detect when agent wants to navigate to apply page
+    if (
+      eventData.type === "response.audio_transcript.done" &&
+      eventData.transcript
+    ) {
+      const transcript = eventData.transcript.toLowerCase();
+      
+      // Check for navigation trigger phrases
+      if (
+        transcript.includes("let me take you to the application") ||
+        transcript.includes("redirecting you to the application") ||
+        transcript.includes("navigate to the application") ||
+        transcript.includes("taking you to the application form") ||
+        transcript.includes("go to the application page")
+      ) {
+        console.log("Navigation trigger detected in transcript:", transcript);
+        setTimeout(() => {
+          window.location.href = "/apply";
+        }, 1000); // Small delay so user hears the message
+      }
+    }
+
+    // Also check text content from assistant
+    if (
+      eventData.type === "response.content_part.added" &&
+      eventData.part?.type === "text" &&
+      eventData.part?.text
+    ) {
+      const text = eventData.part.text.toLowerCase();
+      
+      if (
+        text.includes("let me take you to the application") ||
+        text.includes("redirecting you to the application") ||
+        text.includes("navigate to the application") ||
+        text.includes("taking you to the application form") ||
+        text.includes("go to the application page")
+      ) {
+        console.log("Navigation trigger detected in text:", text);
+        setTimeout(() => {
+          window.location.href = "/apply";
+        }, 1000);
+      }
+    }
   };
 
   // Handle button clicks - conversation or navigation
