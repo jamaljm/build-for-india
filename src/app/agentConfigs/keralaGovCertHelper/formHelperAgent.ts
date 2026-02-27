@@ -164,7 +164,7 @@ const formHelperAgent: AgentConfig = {
             success: false,
             message: "Cannot submit form: Some required fields are missing",
             missingFields: Object.entries(formData.formData)
-              .filter(([_, value]) => value === null)
+              .filter(([, value]) => value === null)
               .map(([key]) => key),
           };
         }
