@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { v4 as uuidv4 } from "uuid";
-import Image from "next/image";
 
 // Types
 import { AgentConfig, SessionStatus } from "@/app/types";
@@ -62,103 +61,31 @@ function App() {
     setSelectedAgentName,
   });
 
-  // Enhanced server event handler to detect user intent to apply
+  // Enhanced server event handler
   const handleServerEvent = (eventData: any) => {
     // Call the original handler
     handleServerEventRef.current(eventData);
-
-    // Check for user intent to apply from agent messages
-    if (
-      eventData.type === "conversation.item.create" &&
-      eventData.item?.role === "assistant" &&
-      eventData.item?.content
-    ) {
-      const content = eventData.item.content;
-      // Check if there's text content suggesting redirection
-      const textContent = content.find(
-        (c: any) => c.type === "message_creation" || c.type === "text"
-      )?.text;
-
-      console.log("Assistant message:", textContent);
-
-      if (
-        textContent &&
-        (textContent.includes("redirect you to the application page") ||
-          textContent.includes("take you to the application form") ||
-          textContent.includes("navigate to the application") ||
-          textContent.includes("application page") ||
-          textContent.includes("Let me take you to") ||
-          textContent.includes("I'll redirect you") ||
-          textContent.includes("Let's go to"))
-      ) {
-        console.log("Navigation trigger detected, redirecting to /apply");
-        // Navigate to the apply page with a slight delay to ensure the console log is visible
-        setTimeout(() => {
-          navigateToApply();
-        }, 200);
-      }
-    }
-
-    // Check for audio transcript redirect triggers
-    if (
-      eventData.type === "response.content_part.done" &&
-      eventData.part?.type === "audio" &&
-      eventData.part?.transcript
-    ) {
-      const transcript = eventData.part.transcript;
-      console.log("Audio transcript:", transcript);
-
-      // Check if transcript contains redirect phrases
-      if (
-        transcript &&
-        (transcript.includes("redirect you to the application") ||
-          transcript.includes("take you to the application") ||
-          transcript.includes("navigate to the application") ||
-          transcript.includes("go to the application") ||
-          transcript.includes("Let me take you to") ||
-          transcript.includes("I'll redirect you") ||
-          transcript.includes("apply for a certificate") ||
-          transcript.includes("application page") ||
-          transcript.includes("application form"))
-      ) {
-        console.log(
-          "Audio transcript navigation trigger detected, redirecting to /apply"
-        );
-        setTimeout(() => {
-          navigateToApply();
-        }, 200);
-      }
-    }
   };
 
-  // Function to handle navigation to the apply page
-  const navigateToApply = () => {
-    console.log("Executing navigation to /apply");
-
-    // Use window.location for more reliable navigation
-    window.location.href = "/apply";
-  };
-
-  // Handle Apply button clicks
-  const handleApplyClick = (certificateType?: string) => {
-    // Tell the agent about the user's intent
+  // Handle button clicks - just trigger conversation
+  const handleStartConversation = (topic?: string) => {
+    if (sessionStatus !== "CONNECTED") {
+      console.log("Not connected - connecting first");
+      connectToRealtime();
+      return;
+    }
+    
     try {
-      if (certificateType) {
+      if (topic) {
         sendSimulatedUserMessage(
-          `I want to apply for a ${certificateType} certificate`
+          `I want to know about ${topic}`
         );
       } else {
-        sendSimulatedUserMessage("I want to apply for a certificate");
+        sendSimulatedUserMessage("Hello, I need help");
       }
     } catch (error) {
       console.error("Error sending message:", error);
     }
-
-    // Navigate to apply page after a short delay
-    console.log("Apply button clicked, redirecting to application page");
-    setTimeout(() => {
-      window.location.href = "/apply";
-    }, 300);
   };
 
   useEffect(() => {
@@ -362,52 +289,43 @@ function App() {
   }, [dcRef.current]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-b from-green-50 to-white">
+    <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}
-      <header className="bg-white text-black p-4">
+      <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="OpenAI Logo"
-              width={80}
-              height={80}
-              className="mr-2"
-            />
-            <div className="text-2xl font-bold">Kerala Government</div>
+            <div className="text-3xl">🤖</div>
+            <div>
+              <h1 className="text-2xl font-bold">Multi-Agent AI System</h1>
+              <p className="text-sm text-blue-100">Build for India Hackathon</p>
+            </div>
           </div>
-          <div className="flex space-x-4">
-            <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
-              English
-            </button>
-            <button className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700">
-              മലയാളം
-            </button>
+          <div className="flex items-center gap-4">
+            <div className="hidden md:block text-sm">
+              <span className="font-semibold">Status: </span>
+              <span className={sessionStatus === "CONNECTED" ? "text-green-300" : "text-red-300"}>
+                {sessionStatus === "CONNECTED" ? "● Connected" : "○ Disconnected"}
+              </span>
+            </div>
           </div>
         </div>
       </header>
 
       {/* Hero section */}
-      <div className="relative h-[400px] bg-green-800">
-        <div
-          className="absolute inset-0 opacity-20"
-          style={{
-            backgroundImage: "url('/kerala-bg.jpg')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        />
-        <div className="relative max-w-7xl mx-auto py-16 px-4 flex flex-col items-center justify-center h-full text-white text-center">
-          <h1 className="text-4xl font-bold mb-6">
-            Kerala Government Certificate Services
-          </h1>
-          <p className="text-xl mb-8 max-w-2xl">
-            Your gateway to hassle-free certificate applications. Fast, secure,
-            and efficient government services at your fingertips.
-          </p>
-          <div className="flex gap-4">
+      <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white">
+        <div className="max-w-7xl mx-auto py-20 px-4 text-center">
+          <div className="mb-8">
+            <h2 className="text-5xl md:text-6xl font-bold mb-4">
+              Voice-Enabled AI Assistant
+            </h2>
+            <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto">
+              Experience the power of multi-agent collaboration through natural voice interaction
+            </p>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center mb-8">
             <button
-              className={`px-6 py-3 rounded-md text-lg font-semibold transition-colors ${
+              className={`px-8 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-lg ${
                 sessionStatus === "CONNECTED"
                   ? "bg-red-600 hover:bg-red-700"
                   : "bg-green-600 hover:bg-green-700"
@@ -419,162 +337,109 @@ function App() {
               }
             >
               {sessionStatus === "CONNECTED"
-                ? "Disconnect from Assistant"
-                : "Connect to Assistant"}
-            </button>
-            <button
-              className="px-6 py-3 bg-blue-600 text-white rounded-md text-lg font-semibold hover:bg-blue-700"
-              onClick={() => handleApplyClick()}
-            >
-              Apply for Certificate
+                ? "🔌 Disconnect Assistant"
+                : "🎤 Connect & Start Speaking"}
             </button>
           </div>
-          <div className="mt-4 text-white">
-            Connection Status:{" "}
-            <span
-              className={
-                sessionStatus === "CONNECTED"
-                  ? "text-green-300"
-                  : "text-red-300"
-              }
-            >
-              {sessionStatus === "CONNECTED"
-                ? "Connected"
-                : sessionStatus === "CONNECTING"
-                ? "Connecting..."
-                : "Disconnected"}
+
+          <div className="inline-block bg-white/10 backdrop-blur-sm rounded-lg px-6 py-3 text-sm md:text-base">
+            <span className="font-semibold">Connection Status: </span>
+            <span className={sessionStatus === "CONNECTED" ? "text-green-300" : sessionStatus === "CONNECTING" ? "text-yellow-300" : "text-red-300"}>
+              {sessionStatus === "CONNECTED" ? "✓ Connected" : sessionStatus === "CONNECTING" ? "⟳ Connecting..." : "✗ Disconnected"}
             </span>
           </div>
         </div>
       </div>
 
-      {/* Services section */}
+      {/* Features section */}
       <div className="max-w-7xl mx-auto py-16 px-4">
-        <h2 className="text-3xl font-bold text-center mb-10 text-green-900">
-          Available Certificate Services
+        <h2 className="text-4xl font-bold text-center mb-12 text-gray-800">
+          Multi-Agent Capabilities
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              type: "Caste",
-              description: "Official document certifying your caste status",
-              icon: "📜",
-              color: "bg-purple-50",
-              borderColor: "border-purple-200",
+              title: "Voice Interaction",
+              description: "Natural language conversation powered by OpenAI Realtime API",
+              icon: "🎙️",
+              color: "from-blue-500 to-blue-600",
             },
             {
-              type: "Income",
-              description: "Proof of annual income certification",
-              icon: "💰",
-              color: "bg-blue-50",
-              borderColor: "border-blue-200",
+              title: "Agent Collaboration",
+              description: "Specialized agents working together to solve complex tasks",
+              icon: "🤝",
+              color: "from-purple-500 to-purple-600",
             },
             {
-              type: "Domicile",
-              description: "Verify your residential status in Kerala",
-              icon: "🏠",
-              color: "bg-green-50",
-              borderColor: "border-green-200",
+              title: "Real-time Processing",
+              description: "Instant responses with streaming audio and text transcription",
+              icon: "⚡",
+              color: "from-pink-500 to-pink-600",
             },
-            {
-              type: "Birth",
-              description: "Official birth registration certificate",
-              icon: "👶",
-              color: "bg-pink-50",
-              borderColor: "border-pink-200",
-            },
-            {
-              type: "Death",
-              description: "Death registration certification",
-              icon: "📋",
-              color: "bg-gray-50",
-              borderColor: "border-gray-200",
-            },
-            {
-              type: "Marriage",
-              description: "Legal marriage registration certificate",
-              icon: "💑",
-              color: "bg-red-50",
-              borderColor: "border-red-200",
-            },
-          ].map((cert) => (
+          ].map((feature) => (
             <div
-              key={cert.type}
-              className={`border-2 rounded-lg p-6 transition-all cursor-pointer ${cert.color} ${cert.borderColor} hover:shadow-md`}
+              key={feature.title}
+              className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all transform hover:-translate-y-1"
             >
-              <div className="flex items-center gap-3 mb-3">
-                <div className={`text-3xl ${cert.color} p-2 rounded-full`}>
-                  {cert.icon}
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800">
-                  {cert.type} Certificate
-                </h3>
+              <div className={`text-6xl mb-4 bg-gradient-to-r ${feature.color} bg-clip-text text-transparent`}>
+                {feature.icon}
               </div>
-              <p className="text-gray-600 mb-4">{cert.description}</p>
-              <button
-                className="w-full py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
-                onClick={() => handleApplyClick(cert.type)}
-              >
-                Apply Now
-              </button>
+              <h3 className="text-2xl font-bold text-gray-800 mb-3">
+                {feature.title}
+              </h3>
+              <p className="text-gray-600">
+                {feature.description}
+              </p>
             </div>
           ))}
+        </div>
+
+        {/* Demo prompt suggestions */}
+        <div className="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8">
+          <h3 className="text-2xl font-bold text-center mb-6 text-gray-800">
+            Try These Prompts
+          </h3>
+          <div className="grid md:grid-cols-2 gap-4">
+            {[
+              "Hello, can you help me?",
+              "Tell me about your capabilities",
+              "How does multi-agent collaboration work?",
+              "What can you assist me with?",
+            ].map((prompt) => (
+              <button
+                key={prompt}
+                onClick={() => handleStartConversation(prompt)}
+                disabled={sessionStatus !== "CONNECTED"}
+                className={`p-4 rounded-lg text-left transition-all ${
+                  sessionStatus === "CONNECTED"
+                    ? "bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer"
+                    : "bg-gray-100 cursor-not-allowed opacity-50"
+                }`}
+              >
+                <span className="text-blue-600 mr-2">💬</span>
+                <span className="text-gray-700">{prompt}</span>
+              </button>
+            ))}
+          </div>
+          {sessionStatus !== "CONNECTED" && (
+            <p className="text-center mt-4 text-sm text-gray-500">
+              Connect to the assistant to try these prompts
+            </p>
+          )}
         </div>
       </div>
 
       {/* Footer */}
-      <footer className="bg-green-900 text-white py-8">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Contact Us</h3>
-              <p>Kerala Government Secretariat</p>
-              <p>Thiruvananthapuram, Kerala</p>
-              <p>India - 695001</p>
-              <p>Phone: +91 471 2518800</p>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2">
-                <li>
-                  <a href="#" className="hover:underline">
-                    Home
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Services
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    About
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:underline">
-                    Contact
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-xl font-semibold mb-4">Follow Us</h3>
-              <div className="flex space-x-4">
-                <a href="#" className="hover:text-green-300">
-                  Facebook
-                </a>
-                <a href="#" className="hover:text-green-300">
-                  Twitter
-                </a>
-                <a href="#" className="hover:text-green-300">
-                  Instagram
-                </a>
-              </div>
-            </div>
+      <footer className="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-8 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 text-center">
+          <div className="mb-4">
+            <h3 className="text-xl font-semibold mb-2">Build for India Hackathon 2026</h3>
+            <p className="text-gray-400">Multi-Agent Systems and Collaboration Track</p>
           </div>
-          <div className="mt-8 pt-8 border-t border-green-700 text-center">
-            <p>© 2023 Government of Kerala. All Rights Reserved.</p>
+          <div className="border-t border-gray-700 pt-4">
+            <p className="text-sm text-gray-400">
+              Powered by OpenAI Realtime API • Next.js 15 • React 19
+            </p>
           </div>
         </div>
       </footer>
