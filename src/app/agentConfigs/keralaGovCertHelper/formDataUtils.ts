@@ -84,6 +84,14 @@ export const updateFormData = (
   try {
     if (typeof window !== "undefined") {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(currentData));
+
+      // Dispatch a custom event so same-tab listeners can react immediately.
+      // The native "storage" event only fires in other tabs.
+      window.dispatchEvent(
+        new CustomEvent("formDataUpdated", {
+          detail: { fieldName, value: sanitized, formData: currentData },
+        })
+      );
     }
   } catch (error) {
     console.error("Error writing form data:", error);

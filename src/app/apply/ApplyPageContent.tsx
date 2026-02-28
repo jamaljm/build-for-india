@@ -856,6 +856,9 @@ export default function ApplyPageContent() {
     }
   }, [isAudioPlaybackEnabled]);
 
+  // Track whether initial load from localStorage is done
+  const initialLoadDoneRef = useRef(false);
+
   // Load form data from localStorage on mount
   useEffect(() => {
     const storedFormData = localStorage.getItem("kerala_gov_cert_form_data");
@@ -888,10 +891,14 @@ export default function ApplyPageContent() {
         console.error("Error parsing stored form data:", error);
       }
     }
+    initialLoadDoneRef.current = true;
   }, []);
 
   // Save form data to localStorage when it changes
+  // Guard: skip the first render to avoid overwriting stored data with empty initial state
   useEffect(() => {
+    if (!initialLoadDoneRef.current) return;
+
     const formDataToStore = {
       formData: {
         fullName: formData.fullName || null,
@@ -913,6 +920,38 @@ export default function ApplyPageContent() {
       JSON.stringify(formDataToStore)
     );
   }, [formData, isFormComplete]);
+
+  // Listen for formDataUpdated custom events dispatched by updateFormData (agent tool calls).
+  // This is the primary mechanism for syncing agent-filled data into React state.
+  useEffect(() => {
+    const handleFormDataUpdated = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.fieldName && detail?.value !== undefined) {
+        setFormData((prev) => ({
+          ...prev,
+          [detail.fieldName]: detail.value,
+        }));
+
+        setLastFieldFilled({
+          fieldName: detail.fieldName,
+          fieldValue: detail.value,
+        });
+
+        setTimeout(() => {
+          setLastFieldFilled(null);
+        }, 5000);
+      }
+
+      if (detail?.formData?.isComplete !== undefined) {
+        setIsFormComplete(detail.formData.isComplete);
+      }
+    };
+
+    window.addEventListener("formDataUpdated", handleFormDataUpdated);
+    return () => {
+      window.removeEventListener("formDataUpdated", handleFormDataUpdated);
+    };
+  }, []);
 
   // Enhanced VoiceAssistant component with connection status
   const EnhancedVoiceAssistant = () => (
