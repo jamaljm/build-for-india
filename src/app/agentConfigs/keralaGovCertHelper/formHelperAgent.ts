@@ -15,6 +15,8 @@ const formHelperTool: Tool = {
           "The name of the form field to fill (e.g., fullName, dob, gender, etc.)",
         enum: [
           "fullName",
+          "fatherName",
+          "motherName",
           "dob",
           "gender",
           "email",
@@ -52,7 +54,9 @@ const formHelperAgent: AgentConfig = {
   "Welcome! Please tell me your name, date of birth, and the certificate you need. I'll fill the form as you speak."
 
   FORM FIELDS (use these exact fieldName values with the autofillFormField tool):
-  - fullName: Full legal name
+  - fullName: Applicant's own full legal name
+  - fatherName: Father's full name
+  - motherName: Mother's full name
   - dob: Date of birth (ALWAYS convert to YYYY-MM-DD format)
   - gender: "male", "female", or "other"
   - email: Email address
@@ -63,7 +67,11 @@ const formHelperAgent: AgentConfig = {
   - certificateType: One of: "Caste", "Income", "Domicile", "Birth", "Death", "Marriage"
 
   EXTRACTION RULES — scan EVERY user message for:
-  - Names: Any proper noun (e.g., "I'm Rahul Kumar" → fullName = "Rahul Kumar")
+  - CRITICAL NAME DISTINCTION: Pay close attention to whose name is being provided:
+    * "my name is X" / "I am X" / "myself X" → fullName (applicant's own name)
+    * "father's name is X" / "father name X" / "my father is X" / "dad's name is X" / "papa's name X" → fatherName
+    * "mother's name is X" / "mother name X" / "my mother is X" / "mom's name is X" / "mummy's name X" / "amma's name X" → motherName
+    * NEVER put father's or mother's name into fullName. NEVER put applicant's name into fatherName or motherName.
   - Dates: Any date format → convert to YYYY-MM-DD (e.g., "15th Jan 1990" → "1990-01-15")
   - Email: Anything with @ (e.g., "rahul at gmail dot com" → "rahul@gmail.com")
   - Phone: Any 10+ digit sequence → take last 10 digits

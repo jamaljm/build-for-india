@@ -107,6 +107,8 @@ export default function ApplyPageContent() {
   });
 
   const [step, setStep] = useState<"capture" | "form">("capture");
+  const [prefilledFields, setPrefilledFields] = useState<Set<string>>(new Set());
+  const [showAllFields, setShowAllFields] = useState(false);
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -219,23 +221,64 @@ export default function ApplyPageContent() {
     const extractedData: Partial<FormData> = {};
     const normalizedText = transcript.toLowerCase();
 
-    // Name extraction
-    const namePatterns = [
-      /my name is ([A-Za-z\s]+)/i,
-      /name is ([A-Za-z\s]+)/i,
-      /i am ([A-Za-z\s]+)/i,
-      /myself ([A-Za-z\s]+)/i,
-      /call me ([A-Za-z\s]+)/i,
-      /([A-Za-z\s]+) is my name/i,
+    // Father's name extraction — must check BEFORE general name patterns
+    const fatherNamePatterns = [
+      /(?:father(?:'s)?|dad(?:'s)?|papa(?:'s)?)\s+name\s+(?:is\s+)?([A-Za-z\s]+)/i,
+      /my\s+father\s+(?:is\s+)?([A-Za-z\s]+)/i,
+      /([A-Za-z\s]+)\s+is\s+my\s+father(?:'s)?\s+name/i,
     ];
 
-    for (const pattern of namePatterns) {
+    for (const pattern of fatherNamePatterns) {
       const match = transcript.match(pattern);
       if (match && match[1]) {
         const name = match[1].trim();
-        if (name.split(" ").length <= 4 && name.length > 3) {
-          extractedData.fullName = name;
+        if (name.split(" ").length <= 4 && name.length > 1) {
+          extractedData.fatherName = name;
           break;
+        }
+      }
+    }
+
+    // Mother's name extraction — must check BEFORE general name patterns
+    const motherNamePatterns = [
+      /(?:mother(?:'s)?|mom(?:'s)?|mummy(?:'s)?|amma(?:'s)?|mum(?:'s)?)\s+name\s+(?:is\s+)?([A-Za-z\s]+)/i,
+      /my\s+mother\s+(?:is\s+)?([A-Za-z\s]+)/i,
+      /([A-Za-z\s]+)\s+is\s+my\s+mother(?:'s)?\s+name/i,
+    ];
+
+    for (const pattern of motherNamePatterns) {
+      const match = transcript.match(pattern);
+      if (match && match[1]) {
+        const name = match[1].trim();
+        if (name.split(" ").length <= 4 && name.length > 1) {
+          extractedData.motherName = name;
+          break;
+        }
+      }
+    }
+
+    // Applicant's own name extraction — only if not a father/mother name context
+    const hasFatherContext = /\b(father|dad|papa)\b/i.test(normalizedText);
+    const hasMotherContext = /\b(mother|mom|mummy|amma|mum)\b/i.test(normalizedText);
+
+    if (!hasFatherContext && !hasMotherContext) {
+      const namePatterns = [
+        /my name is ([A-Za-z\s]+)/i,
+        /name is ([A-Za-z\s]+)/i,
+        /i am ([A-Za-z\s]+)/i,
+        /myself ([A-Za-z\s]+)/i,
+        /call me ([A-Za-z\s]+)/i,
+        /([A-Za-z\s]+) is my name/i,
+      ];
+
+      for (const pattern of namePatterns) {
+        const match = transcript.match(pattern);
+        if (match && match[1]) {
+          const name = match[1].trim();
+          if (name.split(" ").length <= 4 && name.length > 3) {
+            extractedData.fullName = name;
+            break;
+          }
         }
       }
     }
@@ -489,13 +532,22 @@ export default function ApplyPageContent() {
     }
 
     // Capitalize names correctly
-    if (extractedData.fullName) {
-      extractedData.fullName = extractedData.fullName
+    const capitalizeName = (name: string) =>
+      name
         .split(" ")
         .map(
           (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
         )
         .join(" ");
+
+    if (extractedData.fullName) {
+      extractedData.fullName = capitalizeName(extractedData.fullName);
+    }
+    if (extractedData.fatherName) {
+      extractedData.fatherName = capitalizeName(extractedData.fatherName);
+    }
+    if (extractedData.motherName) {
+      extractedData.motherName = capitalizeName(extractedData.motherName);
     }
 
     // Ensure phone number is exactly 10 digits
@@ -561,6 +613,11 @@ export default function ApplyPageContent() {
       ...prev,
       ...data,
     }));
+    const filled = new Set<string>();
+    Object.entries(data).forEach(([key, value]) => {
+      if (value) filled.add(key);
+    });
+    setPrefilledFields(filled);
     setStep("form");
   };
 
@@ -1134,7 +1191,9 @@ export default function ApplyPageContent() {
               Certificate Application Form
             </h1>
             <p className="text-gray-500">
-              Please fill in your personal details to apply for the certificate
+              {prefilledFields.size > 0
+                ? "Some fields were filled from your Aadhaar card. Please complete the remaining fields."
+                : "Please fill in your personal details to apply for the certificate"}
             </p>
             {sessionStatus === "CONNECTED" && (
               <p className="text-sm text-green-600 mt-2">
@@ -1143,11 +1202,44 @@ export default function ApplyPageContent() {
             )}
           </div>
 
+          {prefilledFields.size > 0 && !showAllFields && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <h3 className="text-sm font-semibold text-green-800">Pre-filled from Aadhaar Card</h3>
+                <button
+                  type="button"
+                  onClick={() => setShowAllFields(true)}
+                  className="text-xs text-green-700 hover:text-green-900 underline underline-offset-2"
+                >
+                  Show all fields
+                </button>
+              </div>
+              <div className="grid gap-2 md:grid-cols-2">
+                {Array.from(prefilledFields).map((field) => {
+                  const labels: Record<string, string> = {
+                    fullName: "Full Name", fatherName: "Father's Name", motherName: "Mother's Name",
+                    dob: "Date of Birth", gender: "Gender", address: "Address",
+                    pincode: "Pincode", aadharNumber: "Aadhaar Number",
+                  };
+                  return (
+                    <div key={field} className="flex justify-between text-sm bg-white rounded px-3 py-2">
+                      <span className="text-gray-500">{labels[field] || field}</span>
+                      <span className="text-gray-900 font-medium truncate ml-2">
+                        {formData[field as keyof typeof formData]}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <form
             onSubmit={handleSubmit}
             className="space-y-8 bg-white p-8 rounded-lg shadow-sm border border-gray-200"
           >
             <div className="grid gap-6 md:grid-cols-2">
+              {(showAllFields || !prefilledFields.has("fullName")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "fullName"
@@ -1171,7 +1263,9 @@ export default function ApplyPageContent() {
                   onChange={handleInputChange}
                 />
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("fatherName")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "fatherName"
@@ -1195,7 +1289,9 @@ export default function ApplyPageContent() {
                   onChange={handleInputChange}
                 />
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("motherName")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "motherName"
@@ -1219,7 +1315,9 @@ export default function ApplyPageContent() {
                   onChange={handleInputChange}
                 />
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("dob")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "dob"
@@ -1272,7 +1370,9 @@ export default function ApplyPageContent() {
                   </div>
                 </div>
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("gender")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "gender"
@@ -1320,7 +1420,9 @@ export default function ApplyPageContent() {
                   </div>
                 </div>
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("email")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "email"
@@ -1345,7 +1447,9 @@ export default function ApplyPageContent() {
                   onChange={handleInputChange}
                 />
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("phone")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "phone"
@@ -1372,7 +1476,9 @@ export default function ApplyPageContent() {
                   onChange={handleInputChange}
                 />
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("aadharNumber")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "aadharNumber"
@@ -1398,8 +1504,10 @@ export default function ApplyPageContent() {
                   onChange={handleInputChange}
                 />
               </div>
+              )}
             </div>
 
+            {(showAllFields || !prefilledFields.has("address")) && (
             <div
               className={`space-y-2 ${
                 lastFieldFilled?.fieldName === "address"
@@ -1424,8 +1532,10 @@ export default function ApplyPageContent() {
                 onChange={handleInputChange}
               />
             </div>
+            )}
 
             <div className="grid gap-6 md:grid-cols-2">
+              {(showAllFields || !prefilledFields.has("pincode")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "pincode"
@@ -1451,7 +1561,9 @@ export default function ApplyPageContent() {
                   onChange={handleInputChange}
                 />
               </div>
+              )}
 
+              {(showAllFields || !prefilledFields.has("certificateType")) && (
               <div
                 className={`space-y-2 ${
                   lastFieldFilled?.fieldName === "certificateType"
@@ -1508,6 +1620,7 @@ export default function ApplyPageContent() {
                   </div>
                 </div>
               </div>
+              )}
             </div>
 
             <div className="pt-4">
