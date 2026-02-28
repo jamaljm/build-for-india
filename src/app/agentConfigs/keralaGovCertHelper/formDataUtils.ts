@@ -1,6 +1,8 @@
 export interface FormData {
   formData: {
     fullName: string | null;
+    fatherName: string | null;
+    motherName: string | null;
     dob: string | null;
     gender: string | null;
     email: string | null;
@@ -21,6 +23,8 @@ const MAX_FIELD_LENGTH = 500;
 const getDefaultFormData = (): FormData => ({
   formData: {
     fullName: null,
+    fatherName: null,
+    motherName: null,
     dob: null,
     gender: null,
     email: null,
@@ -65,6 +69,8 @@ export const updateFormData = (
   // Check if all required fields are filled with non-empty trimmed strings
   const requiredFields: (keyof FormData["formData"])[] = [
     "fullName",
+    "fatherName",
+    "motherName",
     "dob",
     "gender",
     "email",

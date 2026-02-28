@@ -62,13 +62,15 @@ export async function POST(req: NextRequest) {
                 text: `Extract the following from this Aadhaar card image. Return ONLY valid JSON with no markdown formatting, no code fences, just the raw JSON object:
 {
   "aadhaarNumber": "12-digit number with no spaces or dashes",
-  "fullName": "full name as printed in English",
+  "fullName": "full name of the card holder as printed in English",
+  "fatherName": "father's name or guardian's name if printed (look for S/O, D/O, C/O labels)",
+  "motherName": "mother's name if printed",
   "dob": "YYYY-MM-DD format",
   "gender": "male or female or other (lowercase)",
   "address": "full address as printed in English",
   "pincode": "6-digit PIN code"
 }
-If a field is not visible or readable, use null for its value. The card may have text in English, Hindi, or Malayalam — always extract the English version of each field.`,
+If a field is not visible or readable, use null for its value. The card may have text in English, Hindi, or Malayalam — always extract the English version of each field. Note: Aadhaar cards often show "S/O" (son of) or "D/O" (daughter of) followed by the father's or guardian's name.`,
               },
               {
                 type: "image_url",

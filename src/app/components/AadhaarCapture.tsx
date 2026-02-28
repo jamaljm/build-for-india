@@ -5,6 +5,8 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 interface AadhaarData {
   aadhaarNumber?: string | null;
   fullName?: string | null;
+  fatherName?: string | null;
+  motherName?: string | null;
   dob?: string | null;
   gender?: string | null;
   address?: string | null;
@@ -14,6 +16,8 @@ interface AadhaarData {
 interface AadhaarCaptureProps {
   onCapture: (data: {
     fullName?: string;
+    fatherName?: string;
+    motherName?: string;
     dob?: string;
     gender?: string;
     address?: string;
@@ -133,6 +137,8 @@ export default function AadhaarCapture({ onCapture, onSkip }: AadhaarCaptureProp
 
     const formData: Record<string, string> = {};
     if (extractedData.fullName) formData.fullName = extractedData.fullName;
+    if (extractedData.fatherName) formData.fatherName = extractedData.fatherName;
+    if (extractedData.motherName) formData.motherName = extractedData.motherName;
     if (extractedData.dob) formData.dob = extractedData.dob;
     if (extractedData.gender) formData.gender = extractedData.gender;
     if (extractedData.address) formData.address = extractedData.address;
@@ -144,6 +150,8 @@ export default function AadhaarCapture({ onCapture, onSkip }: AadhaarCaptureProp
 
   const fieldLabels: Record<string, string> = {
     fullName: "Full Name",
+    fatherName: "Father's Name",
+    motherName: "Mother's Name",
     dob: "Date of Birth",
     gender: "Gender",
     address: "Address",
