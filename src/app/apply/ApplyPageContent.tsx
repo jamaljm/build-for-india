@@ -552,87 +552,46 @@ export default function ApplyPageContent() {
     performSubmission();
   };
 
-  // Handle agent tool execution for form auto-filling
-  const handleAgentToolExecution = (eventData: any) => {
-    if (eventData.type === "tool_execution" && eventData.tool?.name) {
-      if (
-        eventData.tool.name === "autofillFormField" &&
-        eventData.tool.parameters
-      ) {
-        const { fieldName, fieldValue } = eventData.tool.parameters;
+  // Intercept autofillFormField calls from response.done events
+  // The useHandleServerEvent hook processes tool calls and updates localStorage,
+  // but we also need to update React form state directly.
+  const interceptToolCalls = (eventData: any) => {
+    if (eventData.type !== "response.done" || !eventData.response?.output) {
+      return;
+    }
 
-        formAutoFillRef.current = { fieldName, fieldValue };
-        setLastFieldFilled({ fieldName, fieldValue });
-
-        setTimeout(() => {
-          setLastFieldFilled(null);
-        }, 5000);
-
-        setFormData((prevData) => ({
-          ...prevData,
-          [fieldName]: fieldValue,
-        }));
-
-        logClientEvent({
-          type: "form_field_update",
-          fieldName,
-          fieldValue,
-          source: "ai_assistant",
-        });
-
-        sendClientEvent(
-          {
-            type: "tool_execution.result",
-            id: eventData.id,
-            result: {
-              success: true,
-              message: `Field '${fieldName}' filled with value '${fieldValue}'`,
-            },
-          },
-          "form_autofill_result"
-        );
+    for (const outputItem of eventData.response.output) {
+      if (outputItem.type !== "function_call" || !outputItem.arguments) {
+        continue;
       }
 
-      if (
-        eventData.tool.name === "submitApplicationForm" &&
-        eventData.tool.parameters
-      ) {
-        const { confirmed } = eventData.tool.parameters;
+      try {
+        const args = JSON.parse(outputItem.arguments);
 
-        if (confirmed) {
+        if (outputItem.name === "autofillFormField" && args.fieldName && args.fieldValue) {
+          const { fieldName, fieldValue } = args;
+
+          formAutoFillRef.current = { fieldName, fieldValue };
+          setLastFieldFilled({ fieldName, fieldValue });
+
+          setTimeout(() => {
+            setLastFieldFilled(null);
+          }, 5000);
+
+          setFormData((prevData) => ({
+            ...prevData,
+            [fieldName]: fieldValue,
+          }));
+
           logClientEvent({
-            type: "form_submission",
-            formData: formData,
+            type: "form_field_update",
+            fieldName,
+            fieldValue,
             source: "ai_assistant",
-            timestamp: new Date().toISOString(),
           });
-
-          performSubmission();
-
-          sendClientEvent(
-            {
-              type: "tool_execution.result",
-              id: eventData.id,
-              result: {
-                success: true,
-                message: "Application form submitted successfully",
-              },
-            },
-            "form_submission_result"
-          );
-        } else {
-          sendClientEvent(
-            {
-              type: "tool_execution.result",
-              id: eventData.id,
-              result: {
-                success: false,
-                message: "Form submission cancelled",
-              },
-            },
-            "form_submission_cancelled"
-          );
         }
+      } catch {
+        // Skip malformed arguments
       }
     }
   };
@@ -641,8 +600,8 @@ export default function ApplyPageContent() {
   const handleServerEvent = (eventData: any) => {
     handleServerEventRef.current(eventData);
 
-    // Handle tool execution events for form auto-filling
-    handleAgentToolExecution(eventData);
+    // Intercept tool calls to update React form state
+    interceptToolCalls(eventData);
 
     // Handle speech transcription events
     if (
@@ -852,6 +811,12 @@ export default function ApplyPageContent() {
         input_audio_format: "pcm16",
         output_audio_format: "pcm16",
         input_audio_transcription: { model: "whisper-1" },
+        turn_detection: {
+          type: "server_vad",
+          threshold: 0.6,
+          prefix_padding_ms: 400,
+          silence_duration_ms: 1200,
+        },
         tools,
       },
     };
