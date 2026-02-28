@@ -4,9 +4,9 @@ import { TranscriptProvider } from "@/app/contexts/TranscriptContext";
 import { EventProvider } from "@/app/contexts/EventContext";
 
 export const metadata: Metadata = {
-  title: "Build for India - Multi-Agent AI System",
+  title: "Kerala e-District Portal — Certificate Services",
   description:
-    "Intelligent multi-agent system for autonomous decision-making and collaboration",
+    "Apply for government certificates online with voice assistance. Caste, Income, Domicile, Birth, Death, and Marriage certificates from the Kerala State Government.",
 };
 
 export const viewport: Viewport = {

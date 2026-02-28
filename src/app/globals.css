@@ -135,3 +135,14 @@ body {
 .reverse {
   animation-direction: reverse;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-ping,
+  .animate-spin,
+  .animate-wave,
+  .animate-soundwave,
+  .animate-fade-in,
+  .animate-pulse {
+    animation: none;
+  }
+}

@@ -36,7 +36,26 @@ export function useHandleServerEvent({
     call_id?: string;
     arguments: string;
   }) => {
-    const args = JSON.parse(functionCallParams.arguments);
+    let args;
+    try {
+      args = JSON.parse(functionCallParams.arguments);
+    } catch (e) {
+      console.error("Failed to parse function call arguments:", e);
+      sendClientEvent({
+        type: "conversation.item.create",
+        item: {
+          type: "function_call_output",
+          call_id: functionCallParams.call_id,
+          output: JSON.stringify({
+            error: true,
+            message: "Invalid function call arguments",
+          }),
+        },
+      });
+      sendClientEvent({ type: "response.create" });
+      return;
+    }
+
     const currentAgent = selectedAgentConfigSet?.find(
       (a) => a.name === selectedAgentName
     );
@@ -84,10 +103,14 @@ export function useHandleServerEvent({
         functionCallOutput
       );
     } else {
-      const simulatedResult = { result: true };
+      // Unknown tool — return an error result
+      const errorResult = {
+        error: true,
+        message: `Unknown tool: ${functionCallParams.name}`,
+      };
       addTranscriptBreadcrumb(
-        `function call fallback: ${functionCallParams.name}`,
-        simulatedResult
+        `function call error: ${functionCallParams.name}`,
+        errorResult
       );
 
       sendClientEvent({
@@ -95,7 +118,7 @@ export function useHandleServerEvent({
         item: {
           type: "function_call_output",
           call_id: functionCallParams.call_id,
-          output: JSON.stringify(simulatedResult),
+          output: JSON.stringify(errorResult),
         },
       });
       sendClientEvent({ type: "response.create" });

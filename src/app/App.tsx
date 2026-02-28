@@ -37,6 +37,9 @@ function App() {
   const [isAudioPlaybackEnabled, setIsAudioPlaybackEnabled] =
     useState<boolean>(true);
 
+  // Queue for messages to send after connection is established
+  const pendingMessageRef = useRef<string | null>(null);
+
   const sendClientEvent = (eventObj: any, eventNameSuffix = "") => {
     if (dcRef.current && dcRef.current.readyState === "open") {
       logClientEvent(eventObj, eventNameSuffix);
@@ -72,7 +75,7 @@ function App() {
       eventData.transcript
     ) {
       const transcript = eventData.transcript.toLowerCase();
-      
+
       // Check for navigation trigger phrases
       if (
         transcript.includes("let me take you to the application") ||
@@ -81,10 +84,9 @@ function App() {
         transcript.includes("taking you to the application form") ||
         transcript.includes("go to the application page")
       ) {
-        console.log("Navigation trigger detected in transcript:", transcript);
         setTimeout(() => {
           window.location.href = "/apply";
-        }, 1000); // Small delay so user hears the message
+        }, 1000);
       }
     }
 
@@ -95,7 +97,7 @@ function App() {
       eventData.part?.text
     ) {
       const text = eventData.part.text.toLowerCase();
-      
+
       if (
         text.includes("let me take you to the application") ||
         text.includes("redirecting you to the application") ||
@@ -103,7 +105,6 @@ function App() {
         text.includes("taking you to the application form") ||
         text.includes("go to the application page")
       ) {
-        console.log("Navigation trigger detected in text:", text);
         setTimeout(() => {
           window.location.href = "/apply";
         }, 1000);
@@ -113,20 +114,19 @@ function App() {
 
   // Handle button clicks - conversation or navigation
   const handleStartConversation = (topic?: string) => {
+    const message = topic
+      ? `I want to know about ${topic}`
+      : "Hello, I need help";
+
     if (sessionStatus !== "CONNECTED") {
-      console.log("Not connected - connecting first");
+      // Queue the message and connect
+      pendingMessageRef.current = message;
       connectToRealtime();
       return;
     }
-    
+
     try {
-      if (topic) {
-        sendSimulatedUserMessage(
-          `I want to know about ${topic}`
-        );
-      } else {
-        sendSimulatedUserMessage("Hello, I need help");
-      }
+      sendSimulatedUserMessage(message);
     } catch (error) {
       console.error("Error sending message:", error);
     }
@@ -171,6 +171,15 @@ function App() {
       );
       addTranscriptBreadcrumb(`Agent: ${selectedAgentName}`, currentAgent);
       updateSession(true);
+
+      // Send any pending message after connection is established
+      if (pendingMessageRef.current) {
+        const msg = pendingMessageRef.current;
+        pendingMessageRef.current = null;
+        setTimeout(() => {
+          sendSimulatedUserMessage(msg);
+        }, 500);
+      }
     }
   }, [selectedAgentConfigSet, selectedAgentName, sessionStatus]);
 
@@ -329,31 +338,23 @@ function App() {
     }
   }, [isAudioPlaybackEnabled]);
 
-  useEffect(() => {
-    if (dcRef.current) {
-      dcRef.current.addEventListener("message", (e: MessageEvent) => {
-        handleServerEvent(JSON.parse(e.data));
-      });
-    }
-  }, [dcRef.current]);
-
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-blue-50 to-white">
       {/* Header */}
-      <header className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 shadow-lg">
+      <header className="bg-gradient-to-r from-green-700 to-green-800 text-white p-6 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <div className="text-3xl">🤖</div>
+            <div className="text-2xl font-bold tracking-wide">Kerala</div>
             <div>
-              <h1 className="text-2xl font-bold">Multi-Agent AI System</h1>
-              <p className="text-sm text-blue-100">Build for India Hackathon</p>
+              <h1 className="text-2xl font-bold">e-District Portal</h1>
+              <p className="text-sm text-green-200">Government of Kerala</p>
             </div>
           </div>
           <div className="flex items-center gap-4">
             <div className="hidden md:block text-sm">
               <span className="font-semibold">Status: </span>
               <span className={sessionStatus === "CONNECTED" ? "text-green-300" : "text-red-300"}>
-                {sessionStatus === "CONNECTED" ? "● Connected" : "○ Disconnected"}
+                {sessionStatus === "CONNECTED" ? "Connected" : "Disconnected"}
               </span>
             </div>
           </div>
@@ -361,14 +362,14 @@ function App() {
       </header>
 
       {/* Hero section */}
-      <div className="relative bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 text-white">
+      <div className="relative bg-gradient-to-br from-green-700 via-green-800 to-green-900 text-white">
         <div className="max-w-7xl mx-auto py-20 px-4 text-center">
           <div className="mb-8">
             <h2 className="text-5xl md:text-6xl font-bold mb-4">
-              Voice-Enabled AI Assistant
+              Kerala Certificate Services
             </h2>
-            <p className="text-xl md:text-2xl text-blue-100 max-w-3xl mx-auto">
-              Experience the power of multi-agent collaboration through natural voice interaction
+            <p className="text-xl md:text-2xl text-green-100 max-w-3xl mx-auto">
+              Apply for government certificates with voice assistance
             </p>
           </div>
 
@@ -377,7 +378,7 @@ function App() {
               className={`px-8 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-lg ${
                 sessionStatus === "CONNECTED"
                   ? "bg-red-600 hover:bg-red-700"
-                  : "bg-green-600 hover:bg-green-700"
+                  : "bg-blue-600 hover:bg-blue-700"
               }`}
               onClick={
                 sessionStatus === "CONNECTED"
@@ -386,22 +387,22 @@ function App() {
               }
             >
               {sessionStatus === "CONNECTED"
-                ? "🔌 Disconnect Assistant"
-                : "🎤 Connect & Start Speaking"}
+                ? "Disconnect Assistant"
+                : "Connect Voice Assistant"}
             </button>
-            
+
             <button
-              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-lg bg-blue-600 hover:bg-blue-700"
+              className="px-8 py-4 rounded-lg text-lg font-semibold transition-all transform hover:scale-105 shadow-lg bg-white text-green-800 hover:bg-green-50"
               onClick={handleGoToApply}
             >
-              📝 Apply for Certificate
+              Apply for Certificate
             </button>
           </div>
 
           <div className="inline-block bg-white/10 backdrop-blur-sm rounded-lg px-6 py-3 text-sm md:text-base">
             <span className="font-semibold">Connection Status: </span>
             <span className={sessionStatus === "CONNECTED" ? "text-green-300" : sessionStatus === "CONNECTING" ? "text-yellow-300" : "text-red-300"}>
-              {sessionStatus === "CONNECTED" ? "✓ Connected" : sessionStatus === "CONNECTING" ? "⟳ Connecting..." : "✗ Disconnected"}
+              {sessionStatus === "CONNECTED" ? "Connected" : sessionStatus === "CONNECTING" ? "Connecting..." : "Disconnected"}
             </span>
           </div>
         </div>
@@ -410,36 +411,31 @@ function App() {
       {/* Features section */}
       <div className="max-w-7xl mx-auto py-16 px-4">
         <h2 className="text-4xl font-bold text-center mb-12 text-gray-800">
-          Multi-Agent Capabilities
+          How It Works
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
           {[
             {
-              title: "Voice Interaction",
-              description: "Natural language conversation powered by OpenAI Realtime API",
-              icon: "🎙️",
+              title: "Voice Guidance",
+              description: "Speak naturally to get help with your certificate application — no forms to figure out alone.",
+              color: "from-green-500 to-green-600",
+            },
+            {
+              title: "Certificate Expertise",
+              description: "Get clear guidance on requirements for Caste, Income, Domicile, Birth, Death, and Marriage certificates.",
               color: "from-blue-500 to-blue-600",
             },
             {
-              title: "Agent Collaboration",
-              description: "Specialized agents working together to solve complex tasks",
-              icon: "🤝",
-              color: "from-purple-500 to-purple-600",
-            },
-            {
-              title: "Real-time Processing",
-              description: "Instant responses with streaming audio and text transcription",
-              icon: "⚡",
-              color: "from-pink-500 to-pink-600",
+              title: "Auto-Fill Application",
+              description: "Your spoken details are automatically filled into the form — just review and submit.",
+              color: "from-teal-500 to-teal-600",
             },
           ].map((feature) => (
             <div
               key={feature.title}
               className="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-all transform hover:-translate-y-1"
             >
-              <div className={`text-6xl mb-4 bg-gradient-to-r ${feature.color} bg-clip-text text-transparent`}>
-                {feature.icon}
-              </div>
+              <div className={`w-12 h-12 mb-4 rounded-lg bg-gradient-to-r ${feature.color}`} />
               <h3 className="text-2xl font-bold text-gray-800 mb-3">
                 {feature.title}
               </h3>
@@ -450,17 +446,17 @@ function App() {
           ))}
         </div>
 
-        {/* Demo prompt suggestions */}
-        <div className="mt-16 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-8">
+        {/* Prompt suggestions */}
+        <div className="mt-16 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl p-8">
           <h3 className="text-2xl font-bold text-center mb-6 text-gray-800">
-            Try These Prompts
+            Ask the Assistant
           </h3>
           <div className="grid md:grid-cols-2 gap-4">
             {[
-              "Hello, can you help me?",
-              "Tell me about your capabilities",
-              "How does multi-agent collaboration work?",
-              "What can you assist me with?",
+              "What documents do I need for an income certificate?",
+              "How do I apply for a caste certificate?",
+              "What is the process for a birth certificate?",
+              "I need a domicile certificate — what are the requirements?",
             ].map((prompt) => (
               <button
                 key={prompt}
@@ -468,18 +464,17 @@ function App() {
                 disabled={sessionStatus !== "CONNECTED"}
                 className={`p-4 rounded-lg text-left transition-all ${
                   sessionStatus === "CONNECTED"
-                    ? "bg-white hover:bg-blue-50 hover:shadow-md cursor-pointer"
+                    ? "bg-white hover:bg-green-50 hover:shadow-md cursor-pointer"
                     : "bg-gray-100 cursor-not-allowed opacity-50"
                 }`}
               >
-                <span className="text-blue-600 mr-2">💬</span>
                 <span className="text-gray-700">{prompt}</span>
               </button>
             ))}
           </div>
           {sessionStatus !== "CONNECTED" && (
             <p className="text-center mt-4 text-sm text-gray-500">
-              Connect to the assistant to try these prompts
+              Connect to the voice assistant to try these prompts
             </p>
           )}
         </div>
@@ -489,13 +484,8 @@ function App() {
       <footer className="bg-gradient-to-r from-gray-800 to-gray-900 text-white py-8 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <div className="mb-4">
-            <h3 className="text-xl font-semibold mb-2">Build for India Hackathon 2026</h3>
-            <p className="text-gray-400">Multi-Agent Systems and Collaboration Track</p>
-          </div>
-          <div className="border-t border-gray-700 pt-4">
-            <p className="text-sm text-gray-400">
-              Powered by OpenAI Realtime API • Next.js 15 • React 19
-            </p>
+            <h3 className="text-xl font-semibold mb-2">Kerala State Government</h3>
+            <p className="text-gray-400">e-District Portal — Certificate Services</p>
           </div>
         </div>
       </footer>

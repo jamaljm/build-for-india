@@ -16,6 +16,8 @@ export interface FormData {
 
 const STORAGE_KEY = "kerala_gov_cert_form_data";
 
+const MAX_FIELD_LENGTH = 500;
+
 const getDefaultFormData = (): FormData => ({
   formData: {
     fullName: null,
@@ -31,6 +33,10 @@ const getDefaultFormData = (): FormData => ({
   lastUpdated: null,
   isComplete: false,
 });
+
+const sanitizeValue = (value: string): string => {
+  return value.trim().slice(0, MAX_FIELD_LENGTH);
+};
 
 export const readFormData = (): FormData => {
   try {
@@ -51,11 +57,12 @@ export const updateFormData = (
 ): FormData => {
   const currentData = readFormData();
 
-  // Update the specified field
-  currentData.formData[fieldName] = value;
+  // Sanitize the input value
+  const sanitized = sanitizeValue(value);
+  currentData.formData[fieldName] = sanitized;
   currentData.lastUpdated = new Date().toISOString();
 
-  // Check if all required fields are filled
+  // Check if all required fields are filled with non-empty trimmed strings
   const requiredFields: (keyof FormData["formData"])[] = [
     "fullName",
     "dob",
@@ -68,9 +75,10 @@ export const updateFormData = (
     "certificateType",
   ];
 
-  currentData.isComplete = requiredFields.every(
-    (field) => currentData.formData[field] !== null
-  );
+  currentData.isComplete = requiredFields.every((field) => {
+    const val = currentData.formData[field];
+    return val !== null && val.trim().length > 0;
+  });
 
   // Save to localStorage
   try {

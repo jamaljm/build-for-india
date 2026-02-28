@@ -10,6 +10,14 @@ export function injectTransferTools(agentDefs: AgentConfig[]): AgentConfig[] {
 
     // Only proceed if there are downstream agents
     if (downstreamAgents.length > 0) {
+      // Guard against duplicate tool injection
+      const hasTransferTool = agentDef.tools?.some(
+        (t) => t.name === "transferAgents"
+      );
+      if (hasTransferTool) {
+        return;
+      }
+
       // Build a list of downstream agents and their descriptions for the prompt
       const availableAgentsList = downstreamAgents
         .map(
@@ -22,12 +30,12 @@ export function injectTransferTools(agentDefs: AgentConfig[]): AgentConfig[] {
       const transferAgentTool: Tool = {
         type: "function",
         name: "transferAgents",
-        description: `Triggers a transfer of the user to a more specialized agent. 
-  Calls escalate to a more specialized LLM agent or to a human agent, with additional context. 
+        description: `Triggers a transfer of the user to a more specialized agent.
+  Calls escalate to a more specialized LLM agent or to a human agent, with additional context.
   Only call this function if one of the available agents is appropriate. Don't transfer to your own agent type.
-  
+
   Let the user know you're about to transfer them before doing so.
-  
+
   Available Agents:
   ${availableAgentsList}
         `,
@@ -46,7 +54,7 @@ export function injectTransferTools(agentDefs: AgentConfig[]): AgentConfig[] {
             destination_agent: {
               type: "string",
               description:
-                "The more specialized destination_agent that should handle the user’s intended request.",
+                "The more specialized destination_agent that should handle the user's intended request.",
               enum: downstreamAgents.map((dAgent) => dAgent.name),
             },
           },
