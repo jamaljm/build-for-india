@@ -23,6 +23,8 @@ import AadhaarCapture from "@/app/components/AadhaarCapture";
 
 interface FormData {
   fullName: string;
+  fatherName: string;
+  motherName: string;
   dob: string;
   gender: string;
   email: string;
@@ -92,6 +94,8 @@ const Navigation = () => (
 export default function ApplyPageContent() {
   const [formData, setFormData] = useState<FormData>({
     fullName: "",
+    fatherName: "",
+    motherName: "",
     dob: "",
     gender: "",
     email: "",
@@ -885,6 +889,8 @@ export default function ApplyPageContent() {
         if (parsedData.formData) {
           const updatedFormData: FormData = {
             fullName: "",
+            fatherName: "",
+            motherName: "",
             dob: "",
             gender: "",
             email: "",
@@ -919,6 +925,8 @@ export default function ApplyPageContent() {
     const formDataToStore = {
       formData: {
         fullName: formData.fullName || null,
+        fatherName: formData.fatherName || null,
+        motherName: formData.motherName || null,
         dob: formData.dob || null,
         gender: formData.gender || null,
         email: formData.email || null,
@@ -1160,6 +1168,54 @@ export default function ApplyPageContent() {
                   required
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-black"
                   value={formData.fullName}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div
+                className={`space-y-2 ${
+                  lastFieldFilled?.fieldName === "fatherName"
+                    ? "ring-2 ring-green-500 rounded-lg p-1"
+                    : ""
+                }`}
+              >
+                <label
+                  htmlFor="fatherName"
+                  className="text-sm font-medium text-gray-600"
+                >
+                  Father&apos;s Name
+                </label>
+                <input
+                  id="fatherName"
+                  name="fatherName"
+                  placeholder="Enter father's name"
+                  required
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-black"
+                  value={formData.fatherName}
+                  onChange={handleInputChange}
+                />
+              </div>
+
+              <div
+                className={`space-y-2 ${
+                  lastFieldFilled?.fieldName === "motherName"
+                    ? "ring-2 ring-green-500 rounded-lg p-1"
+                    : ""
+                }`}
+              >
+                <label
+                  htmlFor="motherName"
+                  className="text-sm font-medium text-gray-600"
+                >
+                  Mother&apos;s Name
+                </label>
+                <input
+                  id="motherName"
+                  name="motherName"
+                  placeholder="Enter mother's name"
+                  required
+                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none transition-all text-black"
+                  value={formData.motherName}
                   onChange={handleInputChange}
                 />
               </div>
