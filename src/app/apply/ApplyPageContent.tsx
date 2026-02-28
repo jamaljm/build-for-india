@@ -18,6 +18,9 @@ import { createRealtimeConnection } from "../lib/realtimeConnection";
 // Agent configs
 import { allAgentSets, defaultAgentSetKey } from "@/app/agentConfigs";
 
+// Aadhaar capture
+import AadhaarCapture from "@/app/components/AadhaarCapture";
+
 interface FormData {
   fullName: string;
   dob: string;
@@ -98,6 +101,8 @@ export default function ApplyPageContent() {
     aadharNumber: "",
     certificateType: "",
   });
+
+  const [step, setStep] = useState<"capture" | "form">("capture");
 
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [referenceNumber, setReferenceNumber] = useState("");
@@ -547,6 +552,18 @@ export default function ApplyPageContent() {
     setIsFormComplete(true);
   };
 
+  const handleAadhaarCapture = (data: Partial<FormData>) => {
+    setFormData((prev) => ({
+      ...prev,
+      ...data,
+    }));
+    setStep("form");
+  };
+
+  const handleSkipCapture = () => {
+    setStep("form");
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     performSubmission();
@@ -657,10 +674,10 @@ export default function ApplyPageContent() {
   }, []);
 
   useEffect(() => {
-    if (selectedAgentName) {
+    if (selectedAgentName && step === "form") {
       connectToRealtime();
     }
-  }, [selectedAgentName]);
+  }, [selectedAgentName, step]);
 
   useEffect(() => {
     if (
@@ -1097,6 +1114,12 @@ export default function ApplyPageContent() {
       <Navigation />
 
       <main className="flex-grow max-w-3xl mx-auto py-12 px-4">
+        {step === "capture" ? (
+          <AadhaarCapture
+            onCapture={handleAadhaarCapture}
+            onSkip={handleSkipCapture}
+          />
+        ) : (
         <div className="space-y-6">
           <div className="space-y-2 text-center">
             <h1 className="text-3xl font-bold text-green-900">
@@ -1441,6 +1464,7 @@ export default function ApplyPageContent() {
             </div>
           </form>
         </div>
+        )}
       </main>
 
       <Footer />
